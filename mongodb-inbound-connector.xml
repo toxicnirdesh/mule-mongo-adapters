@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:mongo="http://www.mulesoft.org/schema/mule/mongo"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/mongo http://www.mulesoft.org/schema/mule/mongo/current/mule-mongo.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="2aead62d-9dc5-44b5-85dd-cb62c070b659" basePath="/mongodb" >
+		<http:request-connection host="127.0.0.1" port="8080" />
+	</http:request-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="2cbd9cf7-2ec5-4214-b925-2bb17f826fe3" basePath="/mongo">
+		<http:listener-connection host="0.0.0.0" port="8090" />
+	</http:listener-config>
+	<mongo:config name="MongoDB_Config" doc:name="MongoDB Config" doc:id="bab80d11-d213-4577-b498-c7bc6db4a28a" >
+		<mongo:connection database="testDB" >
+			<mongo:server-addresses >
+				<mongo:server-address host="localhost" />
+			</mongo:server-addresses>
+		</mongo:connection>
+	</mongo:config>
+	<flow name="mongodbconnectorsFlow" doc:id="cd705231-054e-48a2-aa28-1d0371843d70" >
+		<http:listener doc:name="Listener" doc:id="f4195fee-1834-4239-a4da-ef44c7eb5371" config-ref="HTTP_Listener_config" path="/inbound"/>
+		<logger level="INFO" doc:name="Logger" doc:id="95285eee-0d3d-4b49-89b8-285a54c63755" message="Request has been landed succefully!"/>
+		<mongo:collection-exists collectionName="Employees" doc:name="Collection exists" doc:id="9b5088be-c2d3-439b-84c7-4ec07f27ee0e" config-ref="MongoDB_Config"/>
+		<choice doc:name="Choice" doc:id="d6b48d45-052b-493a-aa30-cca7a00e27a1" >
+			<when expression="#[payload == false]">
+				<logger level="INFO" doc:name="Logger" doc:id="3f5a86cb-cff1-4050-ba64-7088244ee943" message="Requested Collection Does Not Exists!!!"/>
+
+			</when>
+			<otherwise>
+				<mongo:count-documents doc:name="Count documents" doc:id="6c94151e-a1c6-4be0-8d2b-c3608199a465" config-ref="MongoDB_Config" collectionName="Employees"/>
+				<ee:transform doc:name="Transform Message" doc:id="c1177582-640e-4b85-9298-c5fc04eaa778">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Total Records":payload
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+
+			</otherwise>
+
+		</choice>
+	</flow>
+</mule>
